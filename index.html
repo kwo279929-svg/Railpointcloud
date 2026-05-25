@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>铁路点云智能检测项目作品集</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23084b5b'/%3E%3Ccircle cx='20' cy='22' r='5' fill='%23ff9b55'/%3E%3Ccircle cx='36' cy='28' r='4' fill='%238bd6ff'/%3E%3Ccircle cx='46' cy='42' r='5' fill='%23f8e16c'/%3E%3Cpath d='M17 43c11-17 23-19 31-20' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a class="brand" href="#top">Rail PointCloud Portfolio</a>
+        <div class="nav-links" aria-label="页面导航">
+          <a href="#projects">项目</a>
+          <a href="#viewer">点云查看器</a>
+          <a href="#skills">能力</a>
+          <a href="#contact">联系</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-band">
+        <div class="hero-copy">
+          <p class="eyebrow">实习作品集 · 铁路点云 / 三维视觉 / 数字化巡检</p>
+          <h1>基于激光雷达与 TLS 点云的铁路设施智能检测</h1>
+          <p class="hero-text">
+            以铁路隧道滑槽检测和 OCS 腕臂部件识别为核心项目，展示点云预处理、目标识别、
+            几何测量与三维可视化能力，服务铁路基础设施数字化与智能巡检。
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#viewer">查看交互点云</a>
+            <a class="button secondary" href="#projects">浏览项目经历</a>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="能力摘要">
+          <div>
+            <span class="stat">2</span>
+            <span class="label">铁路点云项目</span>
+          </div>
+          <div>
+            <span class="stat">3D</span>
+            <span class="label">可交互展示</span>
+          </div>
+          <div>
+            <span class="stat">TLS</span>
+            <span class="label">点云识别测距</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Project Experience</p>
+          <h2>项目经历包装</h2>
+          <p>把研究生项目转化成招聘场景下更容易理解的能力证据。</p>
+        </div>
+
+        <div class="project-grid">
+          <article class="project-card">
+            <div class="project-topline">
+              <span class="tag">铁路隧道</span>
+              <span class="tag">激光雷达</span>
+            </div>
+            <h3>基于激光雷达的铁路隧道滑槽检测与参数测量</h3>
+            <p>
+              面向铁路隧道顶部滑槽病害检测需求，基于三维点云完成滑槽区域识别及深度、
+              长度、间距等关键参数测量。
+            </p>
+            <ul>
+              <li>完成点云去噪、隧道顶部 ROI 提取、截面轮廓分析和异常凹陷定位。</li>
+              <li>将人工巡检关注项转化为可量化指标，支持结构状态评估。</li>
+              <li>输出检测结果、参数统计表和三维可视化标注成果。</li>
+            </ul>
+          </article>
+
+          <article class="project-card">
+            <div class="project-topline">
+              <span class="tag">OCS 腕臂</span>
+              <span class="tag">TLS</span>
+            </div>
+            <h3>基于 TLS 点云的铁路 OCS 腕臂部件识别与测距</h3>
+            <p>
+              面向铁路接触网设施数字化管理需求，对绝缘子、螺栓、管帽、平腕臂、斜腕臂、
+              支撑管等关键部件进行识别与空间测距。
+            </p>
+            <ul>
+              <li>负责腕臂区域提取、局部结构分割、杆件拟合和小尺寸零件定位。</li>
+              <li>建立部件间空间测距流程，计算相对位置、间距和结构关系。</li>
+              <li>服务铁路 OCS 智能巡检、数字孪生建模与运维数据建设。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="viewer" class="viewer-section">
+        <div class="viewer-copy">
+          <p class="eyebrow">Interactive Point Cloud</p>
+          <h2>可旋转点云查看器</h2>
+          <p>
+            当前版本内置示意点云，用于展示项目表达方式和交互效果。后续可以将模拟点云替换为真实
+            PLY、PCD、LAS 或 XYZ 数据转换后的前端格式。
+          </p>
+          <div class="viewer-controls" aria-label="点云项目切换">
+            <button class="control-button active" data-scene="tunnel" type="button">
+              隧道滑槽点云
+            </button>
+            <button class="control-button" data-scene="ocs" type="button">
+              OCS 腕臂点云
+            </button>
+          </div>
+          <div class="viewer-actions">
+            <button id="reset-view" class="icon-button" type="button" aria-label="重置视角">
+              重置视角
+            </button>
+            <button id="toggle-spin" class="icon-button" type="button" aria-label="暂停自动旋转">
+              暂停旋转
+            </button>
+          </div>
+          <dl class="metric-list">
+            <div>
+              <dt>检测对象</dt>
+              <dd id="metric-target">隧道顶部滑槽</dd>
+            </div>
+            <div>
+              <dt>关键参数</dt>
+              <dd id="metric-params">深度、长度、间距</dd>
+            </div>
+            <div>
+              <dt>技术链路</dt>
+              <dd id="metric-flow">ROI 提取、截面分析、凹陷定位</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="viewer-shell">
+          <div id="point-cloud-viewer" class="viewer-canvas" aria-label="三维点云查看器"></div>
+          <div class="viewer-hint">拖拽旋转 · 滚轮缩放 · 右键平移</div>
+        </div>
+      </section>
+
+      <section class="section process-section">
+        <div class="section-heading">
+          <p class="eyebrow">Workflow</p>
+          <h2>从点云到工程参数</h2>
+        </div>
+        <div class="process-grid">
+          <div class="process-step">
+            <span>01</span>
+            <h3>点云采集</h3>
+            <p>激光雷达或 TLS 获取铁路隧道、接触网腕臂等场景的三维点云。</p>
+          </div>
+          <div class="process-step">
+            <span>02</span>
+            <h3>预处理</h3>
+            <p>进行去噪、坐标校正、ROI 提取和局部结构切分，降低复杂环境干扰。</p>
+          </div>
+          <div class="process-step">
+            <span>03</span>
+            <h3>识别与测量</h3>
+            <p>结合几何特征、空间关系和截面分析，识别目标并计算关键尺寸。</p>
+          </div>
+          <div class="process-step">
+            <span>04</span>
+            <h3>结果展示</h3>
+            <p>输出参数表、三维标注图和可交互网页，为实习面试提供可见成果。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="skills" class="section skills-section">
+        <div class="section-heading">
+          <p class="eyebrow">Technical Skills</p>
+          <h2>能力标签</h2>
+        </div>
+        <div class="skill-cloud">
+          <span>TLS 点云</span>
+          <span>激光雷达</span>
+          <span>铁路智能巡检</span>
+          <span>点云去噪</span>
+          <span>ROI 提取</span>
+          <span>三维测距</span>
+          <span>部件识别</span>
+          <span>几何拟合</span>
+          <span>Three.js 可视化</span>
+          <span>数字孪生数据</span>
+        </div>
+      </section>
+
+      <section id="contact" class="contact-section">
+        <div>
+          <p class="eyebrow">Contact</p>
+          <h2>用于简历投递的作品集链接</h2>
+          <p>
+            部署到 GitHub Pages 后，可将链接放在简历“项目作品集 / 个人主页”位置。
+            建议补充真实点云截图、测距误差、工具链和项目时间。
+          </p>
+        </div>
+        <a class="button primary" href="mailto:your-email@example.com">联系我</a>
+      </section>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
