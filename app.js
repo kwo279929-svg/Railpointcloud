@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 
 const container = document.querySelector('#point-cloud-viewer');
 const buttons = document.querySelectorAll('[data-scene]');
@@ -32,6 +33,8 @@ controls.target.set(0, 0.2, 0);
 const root = new THREE.Group();
 scene.add(root);
 
+const loader = new PLYLoader();
+
 const grid = new THREE.GridHelper(18, 18, 0x244156, 0x162b3a);
 grid.position.y = -2.1;
 scene.add(grid);
@@ -45,6 +48,8 @@ scene.add(keyLight);
 
 let activeScene = 'tunnel';
 let autoSpin = true;
+let sceneRequestId = 0;
+let ocsPointCloud = null;
 
 const sceneMeta = {
   tunnel: {
@@ -78,6 +83,49 @@ function makePointCloud(points, colors, size = 0.035) {
   });
 
   return new THREE.Points(geometry, material);
+}
+
+function makePlyPointCloud(geometry) {
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  geometry.translate(-center.x, -center.y, -center.z);
+
+  const size = new THREE.Vector3();
+  geometry.computeBoundingBox();
+  geometry.boundingBox.getSize(size);
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  const scale = maxDimension > 0 ? 8 / maxDimension : 1;
+  geometry.scale(scale, scale, scale);
+
+  const material = new THREE.PointsMaterial({
+    size: 0.018,
+    vertexColors: geometry.hasAttribute('color'),
+    color: 0x8bd6ff,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.96,
+  });
+
+  return new THREE.Points(geometry, material);
+}
+
+function loadOcsPlyPointCloud() {
+  if (ocsPointCloud) {
+    return Promise.resolve(ocsPointCloud.clone());
+  }
+
+  return new Promise((resolve, reject) => {
+    loader.load(
+      './data/ocs.ply',
+      (geometry) => {
+        ocsPointCloud = makePlyPointCloud(geometry);
+        resolve(ocsPointCloud.clone());
+      },
+      undefined,
+      reject
+    );
+  });
 }
 
 function addPoint(points, colors, x, y, z, color) {
@@ -126,31 +174,10 @@ function generateTunnelScene() {
   return group;
 }
 
-function generateOcsScene() {
+async function generateOcsScene() {
   const group = new THREE.Group();
-  const points = [];
-  const colors = [];
-  const armColor = new THREE.Color(0x8bd6ff);
-  const insulatorColor = new THREE.Color(0xffc766);
-  const boltColor = new THREE.Color(0xf2f7ff);
-  const capColor = new THREE.Color(0xff7f50);
-
-  addCylinderCloud(points, colors, [-5, 0, 0], [5.2, 0.9, 0], 0.12, 2200, armColor, 101);
-  addCylinderCloud(points, colors, [-3.2, -1.2, 0], [2.2, 2.1, 0], 0.1, 1700, armColor, 211);
-  addCylinderCloud(points, colors, [-1.2, 0.3, -1.7], [2.4, 0.8, 1.7], 0.09, 1300, armColor, 321);
-  addInsulator(points, colors, [-3.9, 0.1, 0], insulatorColor, 420);
-  addInsulator(points, colors, [2.9, 0.72, 0], insulatorColor, 520);
-  addSmallParts(points, colors, boltColor, capColor);
-
-  const pointCloud = makePointCloud(points, colors, 0.045);
+  const pointCloud = await loadOcsPlyPointCloud();
   group.add(pointCloud);
-
-  const base = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 4.8, 0.35),
-    new THREE.MeshStandardMaterial({ color: 0x2c4658, roughness: 0.7 })
-  );
-  base.position.set(-5.4, -1.0, 0);
-  group.add(base);
 
   const label = makeLabelPlane('腕臂部件识别与测距', 0x8bd6ff);
   label.position.set(0.2, 2.8, 0);
@@ -265,10 +292,39 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function setScene(name) {
+function makeLoadingScene(text) {
+  const group = new THREE.Group();
+  const label = makeLabelPlane(text, 0x8bd6ff);
+  group.add(label);
+  return group;
+}
+
+async function setScene(name) {
+  const requestId = ++sceneRequestId;
   activeScene = name;
   root.clear();
-  root.add(name === 'tunnel' ? generateTunnelScene() : generateOcsScene());
+  root.rotation.y = 0;
+
+  if (name === 'tunnel') {
+    root.add(generateTunnelScene());
+  } else {
+    root.add(makeLoadingScene('正在加载 OCS 点云'));
+    try {
+      const ocsScene = await generateOcsScene();
+      if (requestId !== sceneRequestId) {
+        return;
+      }
+      root.clear();
+      root.add(ocsScene);
+    } catch (error) {
+      if (requestId !== sceneRequestId) {
+        return;
+      }
+      root.clear();
+      root.add(makeLoadingScene('OCS 点云加载失败'));
+      console.error('Failed to load OCS PLY point cloud:', error);
+    }
+  }
 
   const meta = sceneMeta[name];
   metricTarget.textContent = meta.target;
@@ -310,7 +366,9 @@ function animate() {
 }
 
 buttons.forEach((button) => {
-  button.addEventListener('click', () => setScene(button.dataset.scene));
+  button.addEventListener('click', () => {
+    setScene(button.dataset.scene);
+  });
 });
 
 resetButton.addEventListener('click', resetView);
