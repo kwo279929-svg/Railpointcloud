@@ -49,7 +49,26 @@ scene.add(keyLight);
 let activeScene = 'tunnel';
 let autoSpin = true;
 let sceneRequestId = 0;
-let ocsPointCloud = null;
+const plyPointClouds = new Map();
+
+const sceneConfig = {
+  tunnel: {
+    path: './data/tunnel2.ply',
+    loadingText: '正在加载隧道滑槽点云',
+    errorText: '隧道滑槽点云加载失败',
+    label: '隧道滑槽检测点云',
+    labelColor: 0xff9b55,
+    pointSize: 0.018,
+  },
+  ocs: {
+    path: './data/ocs.ply',
+    loadingText: '正在加载 OCS 点云',
+    errorText: 'OCS 点云加载失败',
+    label: '腕臂部件识别与测距',
+    labelColor: 0x8bd6ff,
+    pointSize: 0.018,
+  },
+};
 
 const sceneMeta = {
   tunnel: {
@@ -85,7 +104,7 @@ function makePointCloud(points, colors, size = 0.035) {
   return new THREE.Points(geometry, material);
 }
 
-function makePlyPointCloud(geometry) {
+function makePlyPointCloud(geometry, pointSize = 0.018) {
   geometry.computeBoundingBox();
   const center = new THREE.Vector3();
   geometry.boundingBox.getCenter(center);
@@ -99,7 +118,7 @@ function makePlyPointCloud(geometry) {
   geometry.scale(scale, scale, scale);
 
   const material = new THREE.PointsMaterial({
-    size: 0.018,
+    size: pointSize,
     vertexColors: geometry.hasAttribute('color'),
     color: 0x8bd6ff,
     sizeAttenuation: true,
@@ -110,17 +129,19 @@ function makePlyPointCloud(geometry) {
   return new THREE.Points(geometry, material);
 }
 
-function loadOcsPlyPointCloud() {
-  if (ocsPointCloud) {
-    return Promise.resolve(ocsPointCloud.clone());
+function loadPlyPointCloud(name) {
+  const config = sceneConfig[name];
+  if (plyPointClouds.has(name)) {
+    return Promise.resolve(plyPointClouds.get(name).clone());
   }
 
   return new Promise((resolve, reject) => {
     loader.load(
-      './data/ocs.ply',
+      config.path,
       (geometry) => {
-        ocsPointCloud = makePlyPointCloud(geometry);
-        resolve(ocsPointCloud.clone());
+        const pointCloud = makePlyPointCloud(geometry, config.pointSize);
+        plyPointClouds.set(name, pointCloud);
+        resolve(pointCloud.clone());
       },
       undefined,
       reject
@@ -133,53 +154,13 @@ function addPoint(points, colors, x, y, z, color) {
   colors.push(color.r, color.g, color.b);
 }
 
-function generateTunnelScene() {
+async function generatePlyScene(name) {
+  const config = sceneConfig[name];
   const group = new THREE.Group();
-  const points = [];
-  const colors = [];
-  const wallColor = new THREE.Color(0x78c7d8);
-  const slotColor = new THREE.Color(0xff9b55);
-  const markerColor = new THREE.Color(0xf8e16c);
-
-  let seed = 1;
-  for (let i = 0; i < 9800; i += 1) {
-    const theta = Math.PI * (0.08 + pseudoRandom(seed++) * 0.84);
-    const z = -7.4 + pseudoRandom(seed++) * 14.8;
-    const radiusNoise = (pseudoRandom(seed++) - 0.5) * 0.08;
-    const slotCenter = Math.abs(theta - Math.PI / 2) < 0.1 && z > -3.6 && z < 3.8;
-    const radius = 4.05 + radiusNoise - (slotCenter ? 0.45 : 0);
-    const x = Math.cos(theta) * radius;
-    const y = Math.sin(theta) * radius - 2.1;
-    const color = slotCenter ? slotColor : wallColor;
-    addPoint(points, colors, x, y, z, color);
-  }
-
-  for (let k = 0; k < 5; k += 1) {
-    const z = -4.8 + k * 2.4;
-    const geometry = new THREE.TorusGeometry(0.24, 0.016, 8, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0xf8e16c });
-    const marker = new THREE.Mesh(geometry, material);
-    marker.position.set(0, 1.5, z);
-    marker.rotation.x = Math.PI / 2;
-    group.add(marker);
-  }
-
-  const pointCloud = makePointCloud(points, colors, 0.036);
+  const pointCloud = await loadPlyPointCloud(name);
   group.add(pointCloud);
 
-  const label = makeLabelPlane('滑槽凹陷区域', 0xff9b55);
-  label.position.set(0, 2.6, -1.6);
-  group.add(label);
-
-  return group;
-}
-
-async function generateOcsScene() {
-  const group = new THREE.Group();
-  const pointCloud = await loadOcsPlyPointCloud();
-  group.add(pointCloud);
-
-  const label = makeLabelPlane('腕臂部件识别与测距', 0x8bd6ff);
+  const label = makeLabelPlane(config.label, config.labelColor);
   label.position.set(0.2, 2.8, 0);
   group.add(label);
 
@@ -305,25 +286,22 @@ async function setScene(name) {
   root.clear();
   root.rotation.y = 0;
 
-  if (name === 'tunnel') {
-    root.add(generateTunnelScene());
-  } else {
-    root.add(makeLoadingScene('正在加载 OCS 点云'));
-    try {
-      const ocsScene = await generateOcsScene();
-      if (requestId !== sceneRequestId) {
-        return;
-      }
-      root.clear();
-      root.add(ocsScene);
-    } catch (error) {
-      if (requestId !== sceneRequestId) {
-        return;
-      }
-      root.clear();
-      root.add(makeLoadingScene('OCS 点云加载失败'));
-      console.error('Failed to load OCS PLY point cloud:', error);
+  const config = sceneConfig[name];
+  root.add(makeLoadingScene(config.loadingText));
+  try {
+    const plyScene = await generatePlyScene(name);
+    if (requestId !== sceneRequestId) {
+      return;
     }
+    root.clear();
+    root.add(plyScene);
+  } catch (error) {
+    if (requestId !== sceneRequestId) {
+      return;
+    }
+    root.clear();
+    root.add(makeLoadingScene(config.errorText));
+    console.error(`Failed to load ${name} PLY point cloud:`, error);
   }
 
   const meta = sceneMeta[name];
