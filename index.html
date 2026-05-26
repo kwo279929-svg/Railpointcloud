@@ -106,13 +106,29 @@
             通过三维点云查看器展示铁路隧道和 OCS 腕臂项目中的典型结构，可拖拽旋转、滚轮缩放，
             用于直观呈现检测对象、空间关系和几何测量结果。
           </p>
-          <div class="viewer-controls" aria-label="点云项目切换">
-            <button class="control-button active" data-scene="tunnel" type="button">
-              隧道滑槽点云
-            </button>
-            <button class="control-button" data-scene="ocs" type="button">
-              OCS 腕臂点云
-            </button>
+          <div class="viewer-controls" aria-label="点云项目与算法切换">
+            <div class="control-group">
+              <span class="control-label">项目</span>
+              <div class="control-options">
+                <button class="control-button active" data-project="tunnel" type="button">
+                  隧道滑槽检测
+                </button>
+                <button class="control-button" data-project="ocs" type="button">
+                  OCS 腕臂识别
+                </button>
+              </div>
+            </div>
+            <div class="control-group">
+              <span class="control-label">方法</span>
+              <div class="control-options">
+                <button class="control-button active" data-method="traditional" type="button">
+                  传统算法
+                </button>
+                <button class="control-button" data-method="deep" type="button">
+                  结合深度学习
+                </button>
+              </div>
+            </div>
           </div>
           <div class="viewer-actions">
             <button id="reset-view" class="icon-button" type="button" aria-label="重置视角">
@@ -134,6 +150,10 @@
             <div>
               <dt>技术链路</dt>
               <dd id="metric-flow">ROI 提取、截面分析、凹陷定位</dd>
+            </div>
+            <div>
+              <dt>结果说明</dt>
+              <dd id="metric-summary">传统几何方法下的滑槽检测结果</dd>
             </div>
           </dl>
         </div>
@@ -213,6 +233,6 @@
         }
       }
     </script>
-    <script type="module" src="./app.js?v=both-ply-20260526"></script>
+    <script type="module" src="./app.js?v=project-method-ply-20260526"></script>
   </body>
 </html>

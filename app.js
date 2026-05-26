@@ -3,13 +3,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 
 const container = document.querySelector('#point-cloud-viewer');
-const buttons = document.querySelectorAll('[data-scene]');
+const projectButtons = document.querySelectorAll('[data-project]');
+const methodButtons = document.querySelectorAll('[data-method]');
 const resetButton = document.querySelector('#reset-view');
 const toggleSpinButton = document.querySelector('#toggle-spin');
 
 const metricTarget = document.querySelector('#metric-target');
 const metricParams = document.querySelector('#metric-params');
 const metricFlow = document.querySelector('#metric-flow');
+const metricSummary = document.querySelector('#metric-summary');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07131f);
@@ -46,40 +48,64 @@ const keyLight = new THREE.DirectionalLight(0xdff8ff, 1.6);
 keyLight.position.set(5, 9, 7);
 scene.add(keyLight);
 
-let activeScene = 'tunnel';
+let activeProject = 'tunnel';
+let activeMethod = 'traditional';
 let autoSpin = true;
 let sceneRequestId = 0;
 const plyPointClouds = new Map();
 
 const sceneConfig = {
   tunnel: {
-    path: './data/tunnel2.ply',
-    loadingText: '正在加载隧道滑槽点云',
-    errorText: '隧道滑槽点云加载失败',
-    label: '隧道滑槽检测点云',
-    labelColor: 0xff9b55,
-    pointSize: 0.018,
+    traditional: {
+      path: './data/t_t.ply',
+      loadingText: '正在加载隧道传统算法结果',
+      errorText: '隧道传统算法结果加载失败',
+      label: '隧道滑槽检测 · 传统算法',
+      labelColor: 0xff9b55,
+      pointSize: 0.02,
+      target: '隧道顶部滑槽',
+      params: '深度、长度、间距',
+      flow: '几何特征、截面分析、规则阈值',
+      summary: '基于传统几何规则对滑槽区域进行检测，突出可解释的截面与空间参数测量。',
+    },
+    deep: {
+      path: './data/tunnel2.ply',
+      loadingText: '正在加载隧道深度学习结果',
+      errorText: '隧道深度学习结果加载失败',
+      label: '隧道滑槽检测 · 深度学习',
+      labelColor: 0xff9b55,
+      pointSize: 0.018,
+      target: '隧道顶部滑槽',
+      params: '深度、长度、间距',
+      flow: '模型预测、滑槽分割、几何参数计算',
+      summary: '结合深度学习预测结果定位滑槽区域，用于提升复杂结构和噪声场景下的识别稳定性。',
+    },
   },
   ocs: {
-    path: './data/ocs.ply',
-    loadingText: '正在加载 OCS 点云',
-    errorText: 'OCS 点云加载失败',
-    label: '腕臂部件识别与测距',
-    labelColor: 0x8bd6ff,
-    pointSize: 0.018,
-  },
-};
-
-const sceneMeta = {
-  tunnel: {
-    target: '隧道顶部滑槽',
-    params: '深度、长度、间距',
-    flow: 'ROI 提取、截面分析、凹陷定位',
-  },
-  ocs: {
-    target: '绝缘子、螺栓、管帽、腕臂杆件',
-    params: '空间位置、相对距离、结构关系',
-    flow: '部件分割、杆件拟合、小零件定位',
+    traditional: {
+      path: './data/t_o.ply',
+      loadingText: '正在加载 OCS 传统算法结果',
+      errorText: 'OCS 传统算法结果加载失败',
+      label: 'OCS 腕臂识别 · 传统算法',
+      labelColor: 0x8bd6ff,
+      pointSize: 0.026,
+      target: '绝缘子、螺栓、管帽、腕臂杆件',
+      params: '空间位置、相对距离、结构关系',
+      flow: '几何结构、空间关系、规则分割',
+      summary: '基于杆件形态和空间连接关系识别腕臂部件，适合展示规则方法的可解释流程。',
+    },
+    deep: {
+      path: './data/ocs.ply',
+      loadingText: '正在加载 OCS 深度学习结果',
+      errorText: 'OCS 深度学习结果加载失败',
+      label: 'OCS 腕臂识别 · 深度学习',
+      labelColor: 0x8bd6ff,
+      pointSize: 0.018,
+      target: '绝缘子、螺栓、管帽、腕臂杆件',
+      params: '空间位置、相对距离、结构关系',
+      flow: '模型预测、部件分割、场景解析',
+      summary: '结合深度学习结果完成腕臂场景部件级识别，支撑接触网设施数字化建模。',
+    },
   },
 };
 
@@ -130,7 +156,7 @@ function makePlyPointCloud(geometry, pointSize = 0.018) {
 }
 
 function loadPlyPointCloud(name) {
-  const config = sceneConfig[name];
+  const config = getSceneConfig(name);
   if (plyPointClouds.has(name)) {
     return Promise.resolve(plyPointClouds.get(name).clone());
   }
@@ -155,7 +181,7 @@ function addPoint(points, colors, x, y, z, color) {
 }
 
 async function generatePlyScene(name) {
-  const config = sceneConfig[name];
+  const config = getSceneConfig(name);
   const group = new THREE.Group();
   const pointCloud = await loadPlyPointCloud(name);
   group.add(pointCloud);
@@ -165,6 +191,15 @@ async function generatePlyScene(name) {
   group.add(label);
 
   return group;
+}
+
+function getSceneKey(project = activeProject, method = activeMethod) {
+  return `${project}-${method}`;
+}
+
+function getSceneConfig(name = getSceneKey()) {
+  const [project, method] = name.split('-');
+  return sceneConfig[project][method];
 }
 
 function addCylinderCloud(points, colors, start, end, radius, count, color, seedStart) {
@@ -280,16 +315,18 @@ function makeLoadingScene(text) {
   return group;
 }
 
-async function setScene(name) {
+async function setScene(project = activeProject, method = activeMethod) {
   const requestId = ++sceneRequestId;
-  activeScene = name;
+  activeProject = project;
+  activeMethod = method;
+  const sceneKey = getSceneKey(project, method);
   root.clear();
   root.rotation.y = 0;
 
-  const config = sceneConfig[name];
+  const config = getSceneConfig(sceneKey);
   root.add(makeLoadingScene(config.loadingText));
   try {
-    const plyScene = await generatePlyScene(name);
+    const plyScene = await generatePlyScene(sceneKey);
     if (requestId !== sceneRequestId) {
       return;
     }
@@ -301,22 +338,25 @@ async function setScene(name) {
     }
     root.clear();
     root.add(makeLoadingScene(config.errorText));
-    console.error(`Failed to load ${name} PLY point cloud:`, error);
+    console.error(`Failed to load ${sceneKey} PLY point cloud:`, error);
   }
 
-  const meta = sceneMeta[name];
-  metricTarget.textContent = meta.target;
-  metricParams.textContent = meta.params;
-  metricFlow.textContent = meta.flow;
+  metricTarget.textContent = config.target;
+  metricParams.textContent = config.params;
+  metricFlow.textContent = config.flow;
+  metricSummary.textContent = config.summary;
 
-  buttons.forEach((button) => {
-    button.classList.toggle('active', button.dataset.scene === name);
+  projectButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.project === project);
+  });
+  methodButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.method === method);
   });
   resetView();
 }
 
 function resetView() {
-  if (activeScene === 'tunnel') {
+  if (activeProject === 'tunnel') {
     camera.position.set(7.5, 5.5, 10);
     controls.target.set(0, 0.2, 0);
   } else {
@@ -343,9 +383,15 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-buttons.forEach((button) => {
+projectButtons.forEach((button) => {
   button.addEventListener('click', () => {
-    setScene(button.dataset.scene);
+    setScene(button.dataset.project, activeMethod);
+  });
+});
+
+methodButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    setScene(activeProject, button.dataset.method);
   });
 });
 
